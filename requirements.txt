@@ -6,7 +6,5 @@ pandas
 validators
 colorama
 emoji
-git+https://github.com/rdavydov/Twitch-Channel-Points-Miner-v2.git
-TwitchChannelPointsMiner>=1.7.6
 flask>=2.0.0
-requests>=2.25.0
+git+https://github.com/rdavydov/Twitch-Channel-Points-Miner-v2.git

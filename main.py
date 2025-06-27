@@ -166,14 +166,16 @@ def run_twitch_miner():
     Settings.enable_analytics = True  # Habilitado para las analíticas web
     Settings.chat_online = False
 
-    # Obtener puerto desde variable de entorno
-    port = int(os.getenv('PORT', 5000))
+    # Obtener puerto desde variable de entorno (Koyeb asigna automáticamente)
+    port = int(os.getenv('PORT', 8080))  # 8080 como fallback para desarrollo local
     
     # Configurar analíticas web en el puerto principal
     print(f"📊 Iniciando servidor de analíticas en puerto {port}")
+    print(f"🌐 HTTPS habilitado automáticamente por Koyeb")
+    
     twitch_miner.analytics(
         host="0.0.0.0",  # Permitir acceso desde cualquier IP
-        port=port,       # Usar el puerto asignado por Koyeb
+        port=port,       # Usar el puerto asignado por Koyeb (dinámico)
         refresh=5,       # Refrescar cada 5 minutos
         days_ago=30      # Mostrar últimos 30 días
     )
@@ -191,7 +193,8 @@ def run_twitch_miner():
 
     print("✅ Configuración completada, iniciando minado...")
     print("🔍 Monitor de cambios en CSV activado (revisa cada 5 minutos)")
-    print(f"🌐 Analíticas disponibles en: http://0.0.0.0:{port}")
+    print(f"🌐 Analíticas disponibles en el puerto {port}")
+    print("🔒 HTTPS/2 manejado automáticamente por Koyeb")
 
     # Ejecuta el miner con los streamers del CSV
     twitch_miner.run(streamers)
