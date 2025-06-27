@@ -183,34 +183,110 @@ def run_twitch_miner():
     # Leer streamers desde CSV
     streamers = read_streamers_from_csv()
 
-    # Iniciar monitor de cambios en CSV en un thread separado
-    csv_monitor_thread = threading.Thread(
-        target=monitor_csv_changes, 
-        args=(twitch_miner, 300),  # Revisar cada 5 minutos
-        daemon=True
-    )
-    csv_monitor_thread.start()
+    # Iniciar tareas en segundo plano
+    background_thread = threading.Thread(target=background_tasks, args=(twitch_miner,), daemon=True)
+    background_thread.start()
 
     print("✅ Configuración completada, iniciando minado...")
     print("🔍 Monitor de cambios en CSV activado (revisa cada 5 minutos)")
     print(f"🌐 Analíticas disponibles en el puerto {port}")
     print("🔒 HTTPS/2 manejado automáticamente por Koyeb")
 
-    # Ejecuta el miner con los streamers del CSV
-    twitch_miner.run(streamers)
+    # Ejecutar el miner EN EL HILO PRINCIPAL (necesario para las señales del sistema)
+    try:
+        twitch_miner.run(streamers)
+    except KeyboardInterrupt:
+        print("\n🛑 Deteniendo TwitchWatcher...")
+        sys.exit(0)
+
+def background_tasks(twitch_miner):
+    """Ejecuta tareas en segundo plano"""
+    # Iniciar monitor de cambios en CSV
+    csv_monitor_thread = threading.Thread(
+        target=monitor_csv_changes, 
+        args=(twitch_miner, 300),  # Revisar cada 5 minutos
+        daemon=True
+    )
+    csv_monitor_thread.start()
+    
+    # Limpiar logs periódicamente
+    while True:
+        time.sleep(300)  # Revisar cada 5 minutos
+        clean_logs_if_needed()
 
 # Limpiar logs antes de empezar
 clean_logs_if_needed()
 
-# Ejecutar el minero en un hilo separado para no bloquear las analíticas
-miner_thread = threading.Thread(target=run_twitch_miner, daemon=False)
-miner_thread.start()
+# Obtiene las credenciales desde las variables del sistema
+username = os.getenv('TWITCH_USERNAME')
+password = os.getenv('TWITCH_PASSWORD')
 
-# Mantener el programa ejecutándose
+if not username or not password:
+    print("❌ Error: No se encontraron las credenciales en las variables del sistema")
+    print("Asegúrate de que las variables TWITCH_USERNAME y TWITCH_PASSWORD están configuradas")
+    sys.exit(1)
+
+# Configuración del logger minimalista
+logger_settings = LoggerSettings(
+    save=False,  # No guardar logs en archivo
+    less=True,   # Menos información
+    console_level=20,  # INFO level (menos verbose)
+    file_level=30,     # WARNING level 
+    emoji=True,
+    colored=True,
+    auto_clear=True,   # Limpiar logs automáticamente
+    console_username=False  # No mostrar username en cada log
+)
+
+print(f"🚀 Iniciando TwitchWatcher para usuario: {username}")
+
+# Inicialización del minero EN EL HILO PRINCIPAL
+twitch_miner = TwitchChannelPointsMiner(
+    username=username,
+    password=password,
+    logger_settings=logger_settings
+)
+
+# Configurar los ajustes después de la inicialización
+Settings.check_interval = 60
+Settings.make_predictions = False
+Settings.follow_raid = True
+Settings.claim_drops = True
+Settings.watch_streak = True
+Settings.auto_claim_bonuses = True
+Settings.disable_ssl_cert_verification = True
+Settings.enable_analytics = True  # Habilitado para las analíticas web
+Settings.chat_online = False
+
+# Obtener puerto desde variable de entorno
+port = int(os.getenv('PORT', 8080))
+
+# Configurar analíticas web en el puerto principal
+print(f"📊 Iniciando servidor de analíticas en puerto {port}")
+print(f"🌐 HTTPS habilitado automáticamente por Koyeb")
+
+twitch_miner.analytics(
+    host="0.0.0.0",  # Permitir acceso desde cualquier IP
+    port=port,       # Usar el puerto asignado por Koyeb
+    refresh=5,       # Refrescar cada 5 minutos
+    days_ago=30      # Mostrar últimos 30 días
+)
+
+# Leer streamers desde CSV
+streamers = read_streamers_from_csv()
+
+# Iniciar tareas en segundo plano
+background_thread = threading.Thread(target=background_tasks, args=(twitch_miner,), daemon=True)
+background_thread.start()
+
+print("✅ Configuración completada, iniciando minado...")
+print("🔍 Monitor de cambios en CSV activado (revisa cada 5 minutos)")
+print(f"🌐 Analíticas disponibles en el puerto {port}")
+print("🔒 HTTPS/2 manejado automáticamente por Koyeb")
+
+# Ejecutar el miner EN EL HILO PRINCIPAL (necesario para las señales del sistema)
 try:
-    while True:
-        time.sleep(60)  # Revisar cada minuto
-        clean_logs_if_needed()  # Limpiar logs periódicamente
+    twitch_miner.run(streamers)
 except KeyboardInterrupt:
     print("\n🛑 Deteniendo TwitchWatcher...")
     sys.exit(0)
