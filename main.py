@@ -183,9 +183,13 @@ def run_twitch_miner():
     Settings.enable_analytics = True  # Habilitado para las analíticas web
     Settings.chat_online = False
 
-    # Configurar path de analíticas (NUEVO)
+    # Configurar path de analíticas (CRÍTICO para evitar el error)
     current_dir = Path(__file__).parent.absolute()
     Settings.analytics_path = str(current_dir / "analytics")
+
+    # Crear directorio de analytics si no existe
+    analytics_dir = Path(Settings.analytics_path)
+    analytics_dir.mkdir(exist_ok=True)
 
     # Obtener puerto desde variable de entorno (Koyeb asigna automáticamente)
     port = int(os.getenv('PORT', 8080))  # 8080 como fallback para desarrollo local
@@ -294,9 +298,13 @@ Settings.disable_ssl_cert_verification = True
 Settings.enable_analytics = True  # Habilitado para las analíticas web
 Settings.chat_online = False
 
-# Configurar path de analíticas (NUEVO)
+# Configurar path de analíticas (CRÍTICO para evitar el error)
 current_dir = Path(__file__).parent.absolute()
 Settings.analytics_path = str(current_dir / "analytics")
+
+# Crear directorio de analytics si no existe
+analytics_dir = Path(Settings.analytics_path)
+analytics_dir.mkdir(exist_ok=True)
 
 # Obtener puerto desde variable de entorno
 port = int(os.getenv('PORT', 8080))
