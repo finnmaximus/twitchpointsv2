@@ -72,8 +72,19 @@ def read_streamers_from_csv():
             content = file.read().strip()
             # Separar por comas y limpiar espacios
             streamer_names = [name.strip() for name in content.split(',') if name.strip()]
-            streamers = [Streamer(name) for name in streamer_names]
-            print(f"📺 Cargados {len(streamers)} streamers: {', '.join(streamer_names)}")
+            
+            # Validar que los streamers no estén vacíos
+            valid_streamers = []
+            for name in streamer_names:
+                if len(name) > 0 and name.replace('_', '').replace('-', '').isalnum():
+                    valid_streamers.append(Streamer(name))
+                    print(f"✅ Streamer válido: {name}")
+                else:
+                    print(f"⚠️  Streamer inválido ignorado: '{name}'")
+            
+            streamers = valid_streamers
+            print(f"📺 Cargados {len(streamers)} streamers válidos: {', '.join([s.username for s in streamers])}")
+            
     except FileNotFoundError:
         print(f"⚠️  No se encontró {csv_path}")
         print("Creando archivo con streamer por defecto...")
@@ -82,6 +93,11 @@ def read_streamers_from_csv():
         streamers = [Streamer("mixwell")]
     except Exception as e:
         print(f"❌ Error leyendo streamers: {e}")
+        print("Usando streamer por defecto...")
+        streamers = [Streamer("mixwell")]
+    
+    if not streamers:
+        print("⚠️  No hay streamers válidos, usando mixwell por defecto")
         streamers = [Streamer("mixwell")]
     
     return streamers
@@ -137,16 +153,17 @@ def run_twitch_miner():
     # Configuración del logger minimalista
     logger_settings = LoggerSettings(
         save=False,  # No guardar logs en archivo
-        less=True,   # Menos información
-        console_level=20,  # INFO level (menos verbose)
+        less=False,  # Cambiado a False para mostrar más información
+        console_level=10,  # Cambiado a DEBUG para ver más actividad
         file_level=30,     # WARNING level 
         emoji=True,
         colored=True,
         auto_clear=True,   # Limpiar logs automáticamente
-        console_username=False  # No mostrar username en cada log
+        console_username=True  # Cambiado a True para ver el username
     )
 
     print(f"🚀 Iniciando TwitchWatcher para usuario: {username}")
+    print("📝 Configuración del logger ajustada para mostrar más información")
 
     # Inicialización del minero
     twitch_miner = TwitchChannelPointsMiner(
@@ -156,7 +173,7 @@ def run_twitch_miner():
     )
 
     # Configurar los ajustes después de la inicialización
-    Settings.check_interval = 60
+    Settings.check_interval = 30  # Reducido a 30 segundos para más actividad
     Settings.make_predictions = False
     Settings.follow_raid = True
     Settings.claim_drops = True
@@ -165,6 +182,10 @@ def run_twitch_miner():
     Settings.disable_ssl_cert_verification = True
     Settings.enable_analytics = True  # Habilitado para las analíticas web
     Settings.chat_online = False
+
+    # Configurar path de analíticas (NUEVO)
+    current_dir = Path(__file__).parent.absolute()
+    Settings.analytics_path = str(current_dir / "analytics")
 
     # Obtener puerto desde variable de entorno (Koyeb asigna automáticamente)
     port = int(os.getenv('PORT', 8080))  # 8080 como fallback para desarrollo local
@@ -191,6 +212,20 @@ def run_twitch_miner():
     print("🔍 Monitor de cambios en CSV activado (revisa cada 5 minutos)")
     print(f"🌐 Analíticas disponibles en el puerto {port}")
     print("🔒 HTTPS/2 manejado automáticamente por Koyeb")
+    print("⏱️  Verificando cada 30 segundos...")
+    print("")
+    print("🔑 IMPORTANTE: Si aparece un código de activación:")
+    print("   1. Ve a https://www.twitch.tv/activate")
+    print("   2. Introduce el código mostrado")
+    print("   3. El bot continuará automáticamente")
+    print("")
+
+    # Agregar logging adicional para debug
+    print("🔧 Configuración actual:")
+    print(f"   - Streamers: {[s.username for s in streamers]}")
+    print(f"   - Check interval: {Settings.check_interval}s")
+    print(f"   - Analytics habilitado: {Settings.enable_analytics}")
+    print("🎯 Iniciando minado...")
 
     # Ejecutar el miner EN EL HILO PRINCIPAL (necesario para las señales del sistema)
     try:
@@ -229,16 +264,17 @@ if not username or not password:
 # Configuración del logger minimalista
 logger_settings = LoggerSettings(
     save=False,  # No guardar logs en archivo
-    less=True,   # Menos información
-    console_level=20,  # INFO level (menos verbose)
+    less=False,  # Cambiado a False para mostrar más información
+    console_level=10,  # Cambiado a DEBUG para ver más actividad
     file_level=30,     # WARNING level 
     emoji=True,
     colored=True,
     auto_clear=True,   # Limpiar logs automáticamente
-    console_username=False  # No mostrar username en cada log
+    console_username=True  # Cambiado a True para ver el username
 )
 
 print(f"🚀 Iniciando TwitchWatcher para usuario: {username}")
+print("📝 Configuración del logger ajustada para mostrar más información")
 
 # Inicialización del minero EN EL HILO PRINCIPAL
 twitch_miner = TwitchChannelPointsMiner(
@@ -248,7 +284,7 @@ twitch_miner = TwitchChannelPointsMiner(
 )
 
 # Configurar los ajustes después de la inicialización
-Settings.check_interval = 60
+Settings.check_interval = 30  # Reducido a 30 segundos para más actividad
 Settings.make_predictions = False
 Settings.follow_raid = True
 Settings.claim_drops = True
@@ -257,6 +293,10 @@ Settings.auto_claim_bonuses = True
 Settings.disable_ssl_cert_verification = True
 Settings.enable_analytics = True  # Habilitado para las analíticas web
 Settings.chat_online = False
+
+# Configurar path de analíticas (NUEVO)
+current_dir = Path(__file__).parent.absolute()
+Settings.analytics_path = str(current_dir / "analytics")
 
 # Obtener puerto desde variable de entorno
 port = int(os.getenv('PORT', 8080))
@@ -283,6 +323,20 @@ print("✅ Configuración completada, iniciando minado...")
 print("🔍 Monitor de cambios en CSV activado (revisa cada 5 minutos)")
 print(f"🌐 Analíticas disponibles en el puerto {port}")
 print("🔒 HTTPS/2 manejado automáticamente por Koyeb")
+print("⏱️  Verificando cada 30 segundos...")
+print("")
+print("🔑 IMPORTANTE: Si aparece un código de activación:")
+print("   1. Ve a https://www.twitch.tv/activate")
+print("   2. Introduce el código mostrado")
+print("   3. El bot continuará automáticamente")
+print("")
+
+# Agregar logging adicional para debug
+print("🔧 Configuración actual:")
+print(f"   - Streamers: {[s.username for s in streamers]}")
+print(f"   - Check interval: {Settings.check_interval}s")
+print(f"   - Analytics habilitado: {Settings.enable_analytics}")
+print("🎯 Iniciando minado...")
 
 # Ejecutar el miner EN EL HILO PRINCIPAL (necesario para las señales del sistema)
 try:
